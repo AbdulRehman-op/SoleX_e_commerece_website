@@ -1,6 +1,6 @@
 # SoleX Shoes 
 
-SoleX shoes  is a planned full-stack footwear e-commerce application for an E-Commerce
+SoleX is a planned full-stack footwear e-commerce application for an E-Commerce
 course. The repository currently contains the Sprint 1 architecture
 documentation and an empty frontend/backend/database scaffold. Application
 features have not been implemented yet.
