@@ -1,4 +1,4 @@
-# SoleX Shoes 
+# SoleX Shoes Brand  
 
 SoleX is a planned full-stack footwear e-commerce application for an E-Commerce
 course. The repository currently contains the Sprint 1 architecture
@@ -44,6 +44,64 @@ the repository.
 - Checkout and order processing.
 - Historical order price and delivery-address snapshots.
 - Admin product, variant, category, and inventory management.
+
+## Image Storage
+
+Product image binaries are **not** stored directly in PostgreSQL. SoleX uses a
+separate file/object storage layer for image files, while PostgreSQL stores only
+the product relationship, image reference, and non-sensitive display metadata.
+
+```text
+Frontend
+  |
+  v
+Backend upload API
+  |
+  v
+File/Object Storage
+  |
+  v
+PostgreSQL stores image URL/path + metadata
+```
+
+The planned local-development storage layout is:
+
+```text
+uploads/
+└── products/
+   └── <product-id>/
+      ├── main.webp
+      ├── gallery-1.webp
+      └── gallery-2.webp
+```
+
+Each product can have one primary image and multiple gallery images. The
+`product_images` relationship stores `product_id`, `image_url` or
+`image_path`, optional `alt_text`, `sort_order`, `is_primary`, and timestamps.
+Image ordering is controlled by `sort_order`; deletion removes the metadata
+and the corresponding stored file, and replacement creates a new safe stored
+file before updating the reference. Variant-specific images can be added later
+with an optional `product_variant_id` without duplicating image data.
+
+The frontend will send `multipart/form-data` to a backend upload API. The
+backend will validate the MIME type, extension, and size, generate a safe
+unique filename, write to configured storage, persist the reference and
+metadata, and return the retrievable URL/path. Upload, replacement, deletion,
+and primary-image management are admin-only operations; customers must not be
+allowed to manage product images. Image metadata must not contain secrets or
+other sensitive information.
+
+For local development, the backend configuration is expected to use
+`IMAGE_STORAGE_PATH=uploads` and `MAX_IMAGE_SIZE_MB=5`. These values are not
+runtime variables yet because the Express application and package manifests
+have not been created. When implemented, uploaded files will be excluded from
+Git by [`.gitignore`](.gitignore); only `uploads/products/.gitkeep` is tracked
+to preserve the empty directory structure.
+
+Development uses local file/object storage. Production should replace that
+adapter with an S3-compatible or other managed object-storage service without
+changing the database contract: PostgreSQL will continue to store image
+references and metadata rather than image binaries.
 
 There are currently no application screens, API endpoints, database tables,
 authentication flows, or automated tests in the repository.
@@ -168,6 +226,8 @@ SoleX/
 │   │   ├── utils/
 │   │   └── validators/
 │   └── tests/
+├── uploads/
+│   └── products/
 ├── database/
 │   ├── migrations/
 │   └── seeds/
@@ -243,7 +303,8 @@ future `.env.example`.
 
 PostgreSQL is the approved database, but database setup is not available yet:
 
-- `database/migrations/` contains no migration files.
+- `database/migrations/` contains the product-image migration contract, but no
+  products migration or database runner exists yet.
 - `database/seeds/` contains no seed files.
 - No schema, connection configuration, or database initialization script
   exists.
@@ -270,6 +331,12 @@ This section must be updated when those commands are added to the repository.
 No REST API routes currently exist. The backend route directory contains only
 a `.gitkeep` placeholder, so no endpoint list can be documented without
 inventing functionality.
+
+The product-image API is therefore an approved design, not an implemented API.
+Once the backend exists, it must provide admin-protected operations for
+uploading, listing, replacing, deleting, and setting the primary image for a
+product. The frontend must call those endpoints and must never write image
+files or image binaries to PostgreSQL directly.
 
 The approved API direction is a versioned REST API, but its path prefix,
 resources, request formats, response formats, and authentication behavior
@@ -338,6 +405,8 @@ The following items are future work, subject to implementation and verification:
 - Implement one active cart per customer.
 - Implement transactional checkout with price and delivery-address snapshots.
 - Add admin product and inventory management.
+- Implement the admin-only product-image upload API and frontend controls
+  after the authentication and product foundations exist.
 - Add API and database tests.
 - Add setup, API, and deployment documentation based on actual commands.
 

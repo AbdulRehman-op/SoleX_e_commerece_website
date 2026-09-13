@@ -64,6 +64,7 @@ SoleX provides a focused, maintainable footwear-shopping platform with:
 | Create and update products | No | Yes | Yes | `products` |
 | Manage categories | No | Yes | Yes | `categories` |
 | Manage inventory quantities | No | Yes | Yes | `products.stock_quantity` |
+| Manage product images | No | Yes | Yes | `product_images` and file/object storage |
 
 ### Explicitly Out of Scope for the MVP
 
@@ -77,7 +78,7 @@ The following features are not part of the initial implementation:
 - Shipping-provider integration.
 - Tax calculation.
 - Email notifications.
-- Multiple-image galleries and advanced product-variant management.
+- Advanced product-variant management.
 
 For the MVP, each sellable size/color combination may be represented as a product/SKU row. This avoids introducing a separate variant subsystem before it is required.
 
@@ -112,6 +113,31 @@ The frontend and backend remain separate so that each layer has a clear responsi
 
 Only the backend communicates directly with PostgreSQL. Database credentials, JWT secrets, passwords, and API keys must never be exposed to the frontend or committed to the repository. Runtime secrets will be supplied through environment variables; no `.env` file is included in the project.
 
+### Product Image Storage
+
+- Product image files are stored outside PostgreSQL in a dedicated file/object
+    storage layer.
+- PostgreSQL stores image references and metadata in `product_images`, not
+    image binaries.
+- The backend owns upload validation, safe filename generation, storage, and
+    database persistence.
+- Admin users can upload, replace, delete, reorder, and select product images;
+    customers cannot manage them.
+- Images are associated with products, with multiple images per product and
+    one image marked as primary.
+- Upload validation must enforce approved image MIME types/extensions and a
+    server-side file-size limit.
+- Runtime uploads are excluded from Git; only the required empty local storage
+    directory marker is tracked.
+- The storage adapter must be replaceable with cloud object storage in
+    production without changing the database reference model.
+
+For local development, the planned layout is `uploads/products/<product-id>/`.
+The planned configuration values are `IMAGE_STORAGE_PATH=uploads` and
+`MAX_IMAGE_SIZE_MB=5`. These are architecture requirements, not implemented
+runtime settings yet because the backend and authentication layers are still
+scaffold-only.
+
 ---
 
 ## 4. Entity-Relationship Diagram
@@ -128,6 +154,7 @@ erDiagram
     PRODUCTS ||--o{ ORDER_ITEMS : referenced_by
     PRODUCTS ||--o{ PRODUCT_CATEGORIES : assigned_to
     CATEGORIES ||--o{ PRODUCT_CATEGORIES : contains
+    PRODUCTS ||--o{ PRODUCT_IMAGES : has
 
     USERS {
         bigint id PK
@@ -168,6 +195,18 @@ erDiagram
         bigint product_id PK, FK
         bigint category_id PK, FK
         timestamptz created_at
+    }
+
+    PRODUCT_IMAGES {
+        bigint id PK
+        bigint product_id FK
+        text image_path
+        text image_url
+        text alt_text
+        integer sort_order
+        boolean is_primary
+        timestamptz created_at
+        timestamptz updated_at
     }
 
     CARTS {
@@ -216,6 +255,8 @@ erDiagram
 - `Orders 1:N Order_Items`: an order contains one or more purchased items.
 - `Products 1:N Order_Items`: a product can be referenced by many historical order items.
 - `Products N:M Categories`: products and categories are connected through `product_categories`.
+- `Products 1:N Product_Images`: each product can have multiple ordered images;
+    one can be marked as primary.
 
 The order item stores `unit_price` and `line_total` so historical orders remain accurate when the current product price changes. Checkout must validate stock and create the order, order items, inventory updates, and cart clearing within one PostgreSQL transaction.
 
