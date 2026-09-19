@@ -7,3 +7,9 @@ build/
 coverage/
 *.log
 
+# Runtime product image uploads are stored outside Git.
+uploads/*
+!uploads/products/
+uploads/products/*
+!uploads/products/.gitkeep
+
