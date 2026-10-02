@@ -1,0 +1,36 @@
+{
+  "name": "solex",
+  "version": "1.0.0",
+  "description": "SoleX — Full-Stack E-Commerce Web Application",
+  "main": "src/index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "psql $DATABASE_URL -f Database/001_categories.sql -f Database/002_products.sql -f Database/003_variants.sql -f Database/004_skus.sql -f Database/005_assets.sql",
+    "seed": "psql $DATABASE_URL -f Database/006_seed_data.sql",
+    "test": "node --test tests/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbdulRehman-op/SoleX_e_commerce_website.git"
+  },
+  "keywords": ["ecommerce", "solex", "shoes", "express", "postgres"],
+  "author": "Abdul Rehman",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AbdulRehman-op/SoleX_e_commerce_website/issues"
+  },
+  "homepage": "https://github.com/AbdulRehman-op/SoleX_e_commerce_website#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1"
+  }
+}
