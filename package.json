@@ -12,7 +12,7 @@
     "dev": "node --watch src/index.js",
     "migrate": "psql $DATABASE_URL -f Database/001_categories.sql -f Database/002_products.sql -f Database/003_variants.sql -f Database/004_skus.sql -f Database/005_assets.sql",
     "seed": "psql $DATABASE_URL -f Database/006_seed_data.sql",
-    "test": "node --test tests/"
+    "test": "node --test tests/*.test.js"
   },
   "repository": {
     "type": "git",

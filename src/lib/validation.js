@@ -1,12 +1,14 @@
 const allowedStatuses = new Set(['draft', 'published', 'archived']);
 
 function buildSlug(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 200) || 'item';
+  return (
+    String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 200) || 'item'
+  );
 }
 
 function isValidStatus(status) {
@@ -17,6 +19,10 @@ function variantKey(size, color) {
   return `${String(size).trim().toLowerCase()}::${String(color).trim().toLowerCase()}`;
 }
 
+// =====================================================
+// CATEGORY CYCLE PREVENTION
+// =====================================================
+
 function categoryHasCycle(categories, currentId, candidateParentId) {
   if (candidateParentId == null || currentId == null) {
     return false;
@@ -26,6 +32,12 @@ function categoryHasCycle(categories, currentId, candidateParentId) {
   let parentId = candidateParentId;
 
   while (parentId != null) {
+    // Self-loop
+    if (parentId === currentId) {
+      return true;
+    }
+
+    // Already visited → cycle
     if (visited.has(parentId)) {
       return true;
     }
@@ -34,10 +46,6 @@ function categoryHasCycle(categories, currentId, candidateParentId) {
     const parent = categories.find((category) => category.id === parentId);
     if (!parent) {
       return false;
-    }
-
-    if (parent.id === currentId) {
-      return true;
     }
 
     parentId = parent.parentId ?? null;
@@ -55,17 +63,26 @@ function validateCategoryState(category, categories) {
     throw new Error('A category cannot be its own parent.');
   }
 
-  if (category.parentId != null && categoryHasCycle(categories, category.id, category.parentId)) {
+  if (
+    category.parentId != null &&
+    categoryHasCycle(categories, category.id, category.parentId)
+  ) {
     throw new Error('Category hierarchy cannot contain cycles.');
   }
 }
+
+// =====================================================
+// PRODUCT / SKU VALIDATION
+// =====================================================
 
 function ensurePublishedProductHasActiveSku(productStatus, skus) {
   if (productStatus !== 'published') {
     return;
   }
 
-  const hasActiveSku = skus.some((sku) => sku.active === true && Number(sku.stockQuantity) > 0);
+  const hasActiveSku = skus.some(
+    (sku) => sku.active === true && Number(sku.stockQuantity) > 0
+  );
 
   if (!hasActiveSku) {
     throw new Error('Published products require at least one active SKU with stock.');
@@ -94,11 +111,16 @@ function validateSku({ skuCode, price, stockQuantity, active = true, available =
   }
 }
 
+// =====================================================
+// EXPORTS
+// =====================================================
+
 module.exports = {
   allowedStatuses,
   buildSlug,
   isValidStatus,
   variantKey,
+  categoryHasCycle,
   validateCategoryState,
   ensurePublishedProductHasActiveSku,
   validateSku,
